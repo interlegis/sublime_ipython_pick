@@ -1,0 +1,3 @@
+
+class TextCommand(object):
+    pass
