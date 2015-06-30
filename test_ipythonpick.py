@@ -8,7 +8,7 @@ sys.modules['sublime_plugin'] = __import__('stub_sublime_plugin')
 import StringIO
 from pytest import mark
 
-from ipythonpick import get_sentences  # noqa
+from ipythonpick import get_sentences, get_summarized_sentences  # noqa
 
 # contents taken from an actual ipython_log.py files (with ipython==3.2.0)
 contents_and_sentences = [
@@ -69,6 +69,32 @@ if 2 > 1:
     print 21
 
 34
+''',  # -----------------------------------------
+     '''
+def f(a, b):
+    return a, b
+
+f(1,2)
+
+f(2,3)
+
+def f(a, b):
+    return a, b, 34
+
+range(9)
+
+if True:
+    print 23
+
+42
+
+for x in [1,2]:
+    print x
+
+if 2 > 1:
+    print 21
+
+34
 '''),
     #############################################
     # with multi line strings
@@ -104,6 +130,19 @@ long
    long text"""
 
 [1, 2]
+''',  # -----------------------------------------
+     '''
+def f(a, b):
+    return a, b
+
+for k in [1,2]:
+    print k
+
+abc = """This is a long...
+long
+   long text"""
+
+[1, 2]
 '''),
     #############################################
     # ignore sentences with syntax errors
@@ -111,19 +150,39 @@ long
 19
 def (:
 45
+a = 2
+a = 3
 ''',  # -----------------------------------------
      '''
 19
 
 45
+
+a = 2
+
+a = 3
+''',  # -----------------------------------------
+     '''
+19
+
+45
+
+a = 3
 '''),
     #############################################
 ]
 
 
-@mark.parametrize("ipython_log_contents, sentences", contents_and_sentences)
-def test_log_entries(ipython_log_contents, sentences):
+@mark.parametrize("ipython_log_contents, sentences, summarized", contents_and_sentences)
+def test_log_entries(ipython_log_contents, sentences, summarized):
+
+    def split_expected(sentences):
+        sentences = sentences.strip().split('\n\n')
+        sentences.reverse()
+        return sentences
+
     lines = StringIO.StringIO(ipython_log_contents).readlines()
-    sentences = sentences.strip().split('\n\n')
-    sentences.reverse()
+    sentences, summarized = map(split_expected, (sentences, summarized))
+
     assert get_sentences(lines) == sentences
+    assert get_summarized_sentences(lines) == summarized

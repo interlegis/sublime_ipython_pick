@@ -1,5 +1,7 @@
 import code
+import re
 from os import path
+from itertools import islice
 
 import sublime
 import sublime_plugin
@@ -7,9 +9,10 @@ import sublime_plugin
 
 LIMIT = 30
 IPYTHON_LOG = 'ipython_log.py'
+ASSING_RE = re.compile('([^=])+=[^=].*')
 
 
-def get_sentences(lines, limit=None):
+def get_sentences(lines):
     sentence_list = []
     partial = ''
 
@@ -30,7 +33,33 @@ def get_sentences(lines, limit=None):
                 partial = ''  # reset
     collect()
     sentence_list.reverse()
-    return sentence_list[:limit]
+    return sentence_list
+
+
+def get_summarized_sentences(lines, limit=None):
+
+    def _iter_summarized_sentences(lines):
+        previous_sentences = set()
+        previous_assignment_vars = set()
+        for sentence in get_sentences(lines):
+            # filter IPython magics
+            if sentence.startswith('get_ipython().magic'):
+                continue
+            # ignore duplicate sentences
+            if sentence in previous_sentences:
+                continue
+            # keep just the last variable reassignment
+            assignment = ASSING_RE.match(sentence)
+            if assignment:
+                var = assignment.group(1).strip()
+                if var in previous_assignment_vars:
+                    continue
+                else:
+                    previous_assignment_vars.add(var)
+            previous_sentences.add(sentence)
+            yield sentence
+
+    return list(islice(_iter_summarized_sentences(lines), 0, limit))
 
 
 class IpythonPickCommand(sublime_plugin.TextCommand):
@@ -60,7 +89,7 @@ class IpythonPickCommand(sublime_plugin.TextCommand):
                 ipylog = None
 
         with open(ipylog, 'r') as f:
-            options = get_sentences(f.readlines(), LIMIT)
+            options = get_summarized_sentences(f.readlines(), LIMIT)
 
         def sel(index):
             if index > -1:
