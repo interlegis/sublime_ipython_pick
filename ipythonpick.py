@@ -1,6 +1,5 @@
-import inspect
+import code
 from os import path
-import string
 
 import sublime
 import sublime_plugin
@@ -10,39 +9,28 @@ LIMIT = 30
 IPYTHON_LOG = 'ipython_log.py'
 
 
-def get_raw_log_entries(ipython_log_contents, limit=None):
-    entries = []
-    buffer = []
+def get_sentences(lines, limit=None):
+    sentence_list = []
+    partial = ''
 
-    def clear():
-        if buffer:
-            entries.append('\n'.join(buffer))
-            buffer[:] = []
+    def collect():
+        sentence = str(partial.strip())
+        if sentence and not sentence.startswith('#'):
+            sentence_list.append(sentence)
 
-    def is_empty_line(line):
-        return not line or line.strip().startswith('#')
-
-    lines = iter(ipython_log_contents.splitlines())
-    try:
-        while True:
-            line = next(lines)
-            if is_empty_line(line):
-                # we could just continue,
-                # but let's be resilient to user added blank lines
-                clear()
-            elif line[0] in string.whitespace:
-                # it is a block, accumulate until an empty line
-                while not is_empty_line(line):
-                    buffer.append(line)
-                    line = next(lines)
-                clear()
-            else:
-                clear()
-                buffer.append(line)
-    except StopIteration:
-        clear()
-    entries.reverse()
-    return entries[:limit]
+    for line in lines:
+        partial += line
+        try:
+            compiled = code.compile_command(partial)
+        except (SyntaxError, ValueError, OverflowError):
+            partial = ''  # discard and reset
+        else:
+            if compiled:
+                collect()
+                partial = ''  # reset
+    collect()
+    sentence_list.reverse()
+    return sentence_list[:limit]
 
 
 class IpythonPickCommand(sublime_plugin.TextCommand):
@@ -72,14 +60,11 @@ class IpythonPickCommand(sublime_plugin.TextCommand):
                 ipylog = None
 
         with open(ipylog, 'r') as f:
-            options = get_raw_log_entries(f.read(), LIMIT)
+            options = get_sentences(f.readlines(), LIMIT)
 
         def sel(index):
             if index > -1:
                 text = options[index]
                 self.view.run_command("insert", {"characters": text})
-
-        print(type(edit))
-        print(inspect.getfile(type(edit)))
 
         self.view.show_popup_menu(options, sel)
