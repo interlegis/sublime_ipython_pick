@@ -1,14 +1,23 @@
 # -*- coding: utf-8 -*-
-
-# mock module dependencies
-import sys
-sys.modules['sublime'] = __import__('stub_sublime')
-sys.modules['sublime_plugin'] = __import__('stub_sublime_plugin')
-
 import StringIO
+import sys
+
 from pytest import mark
 
-from ipythonpick import get_sentences, get_summarized_sentences  # noqa
+
+try:
+    from ipythonpick import get_sentences, get_summarized_sentences
+except ImportError, e:
+    # mock module dependencies not relevant to the tests
+    # (only if we're really out of sublime environment)
+    if e.message in ['No module named %s' % name
+                     for name in ['sublime', 'sublime_plugin']]:
+        import stubmodule_sublime
+        import stubmodule_sublime_plugin
+        sys.modules['sublime'] = stubmodule_sublime
+        sys.modules['sublime_plugin'] = stubmodule_sublime_plugin
+    from ipythonpick import get_sentences, get_summarized_sentences
+
 
 # contents taken from an actual ipython_log.py files (with ipython==3.2.0)
 contents_and_sentences = [
