@@ -1,2 +1,3 @@
 pytest
 ipdb
+pytest-ipdb==0.1-prerelease2
