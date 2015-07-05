@@ -9,7 +9,7 @@ import sublime_plugin
 
 LIMIT = 30
 IPYTHON_LOG = 'ipython_log.py'
-ASSING_RE = re.compile('([^=])+=[^=].*')
+ASSING_RE = re.compile('^([^=\n]+)=[^=].*')
 
 
 def get_sentences(lines):
