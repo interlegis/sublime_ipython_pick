@@ -94,6 +94,17 @@ class IpythonPickCommand(sublime_plugin.TextCommand):
         def sel(index):
             if index > -1:
                 text = options[index]
-                self.view.run_command("insert", {"characters": text})
+                if '\n' not in text:
+                    self.view.run_command("insert", {"characters": text})
+                else:
+                    pos = self.view.sel()[0].begin()
+                    col = self.view.rowcol(pos)[1]
+                    text = '\n'.join((' ' * col if i > 0 else '') + l
+                                     for i, l in enumerate(text.split('\n')))
+
+                    auto_indent = self.view.settings().get("auto_indent")
+                    self.view.settings().set("auto_indent", False)
+                    self.view.run_command("insert", {"characters": text})
+                    self.view.settings().set("auto_indent", auto_indent)
 
         self.view.show_popup_menu(options, sel)
