@@ -16,6 +16,7 @@ Once found, the last statements are extracted, filtered and listed in a drop-dow
 Selecting one of them inserts it at caret position.
 
 The statements are filtered by removing:
+
   * calls to IPython magic commands
   * repeated statements
   * reassignments to the same variable: only the last assignment to a given variable is kept.
